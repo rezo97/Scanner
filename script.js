@@ -1,4 +1,4 @@
-// script.js (ოპტიმიზებული ვერსია სკანირებისთვის)
+// script.js (User-Friendly და ოპტიმიზებული ვერსია)
 
 // გლობალური ცვლადები
 let currentItemID = null;
@@ -23,12 +23,12 @@ const inventoryList = document.getElementById('inventory-list');
 // QR სკანერის ინსტანცია
 const html5Qrcode = new Html5Qrcode("reader");
 
-// კონფიგურაცია - ოპტიმიზებული ვერსია სკანირების გასაუმჯობესებლად
+// კონფიგურაცია - ოპტიმიზებულია სკანირების სიჩქარისა და სიზუსტისთვის
 const config = { 
     fps: 15, // გაზრდილი კადრი წამში
     qrbox: { width: 250, height: 250 }, // ოპტიმალური ყუთის ზომა
     aspectRatio: 1.777778, // 16:9 ასპექტის თანაფარდობა
-    disableFlip: false, // არ უნდა გამორთოთ სარკისებური ჩვენება
+    disableFlip: false,
     verbose: true     
 };
 
@@ -39,7 +39,8 @@ let isScannerActive = false;
 function updateStatusDisplay() {
     itemStatusEl.innerHTML = `**ნივთის QR (ID):** ${currentItemID || 'არ დასკანერებულა'}`;
     shelfStatusEl.innerHTML = `**თაროს QR (ID):** ${currentShelfID || 'არ დასკანერებულა'}`;
-    saveButton.disabled = !(currentItemID && currentShelfID);
+    // "დამაგრება" აქტიურდება, როცა ორივე ID არსებობს
+    saveButton.disabled = !(currentItemID && currentShelfID); 
 }
 
 function logMessage(message, type = 'info') {
@@ -47,20 +48,33 @@ function logMessage(message, type = 'info') {
     p.innerHTML = message;
     p.className = `message-${type}`;
     messageLog.prepend(p);
-    setTimeout(() => p.remove(), 10000);
+    // შეტყობინებების ავტომატური წაშლა 10 წამში
+    setTimeout(() => p.remove(), 10000); 
 }
 
 function resetData() {
     currentItemID = null;
     currentShelfID = null;
     updateStatusDisplay();
-    logMessage("სტატუსი გასუფთავდა. მზადაა ახალი სკანირებისთვის. ჩართეთ კამერა.", 'info');
+    logMessage("სტატუსი გასუფთავდა. მზადაა ახალი ნივთის დასამაგრებლად.", 'info');
+    // ჩართვის ღილაკის აღდგენა (თუ არ არის აქტიური)
+    if (!isScannerActive) {
+        cameraToggleButton.innerHTML = '<span class="icon">▶️</span> კამერის ჩართვა';
+        cameraToggleButton.classList.remove('stop-btn', 'start-btn');
+        cameraToggleButton.classList.add('start-btn');
+        cameraToggleButton.disabled = false;
+    }
 }
 
 async function saveData() {
     if (!currentItemID || !currentShelfID) return;
+    
+    // **User-Friendly: ღილაკის დროებითი გათიშვა**
+    saveButton.disabled = true;
+    saveButton.innerHTML = '...შენახვა'; 
 
     try {
+        // **შეამოწმეთ, რომ "db" ცვლადი გლობალურადაა განსაზღვრული firebase-config.js-ში!**
         const timestamp = firebase.firestore.FieldValue.serverTimestamp();
         
         await db.collection("inventory").doc(currentItemID).set({
@@ -73,7 +87,11 @@ async function saveData() {
         resetData(); 
         
     } catch (error) {
-        logMessage(`❌ Firebase შეცდომა: ${error.message}`, 'error');
+        logMessage(`❌ Firebase შეცდომა: ${error.name || ''}: ${error.message}. შეამოწმეთ firebase-config.js!`, 'error');
+        // შეცდომის შემთხვევაში ღილაკის აღდგენა
+        updateStatusDisplay();
+        saveButton.innerHTML = '💾 დამაგრება'; 
+
     }
 }
 
@@ -82,30 +100,27 @@ function onScanSuccess(decodedText, decodedResult) {
     
     if (!currentItemID) {
         currentItemID = scannedID;
-        logMessage(`**ნივთის QR დასკანერდა:** **${currentItemID}**`);
+        logMessage(`**ნივთის QR დასკანერდა:** **${currentItemID}**. ახლა დაასკანერეთ თაროს QR.`, 'info');
     } else if (!currentShelfID) {
         if (scannedID === currentItemID) {
-            logMessage("გაფრთხილება: ნივთი და თარო ვერ იქნება ერთი და იგივე კოდი.", 'warning');
+            logMessage("გაფრთხილება: ნივთი და თარო ვერ იქნება ერთი და იგივე კოდი. სცადეთ ხელახლა.", 'warning');
             return;
         }
         currentShelfID = scannedID;
-        logMessage(`**თაროს QR დასკანერდა:** **${currentShelfID}**`);
+        logMessage(`**თაროს QR დასკანერდა:** **${currentShelfID}**. დააჭირეთ 'დამაგრებას'.`, 'info');
         
+        // **User-Friendly: ავტომატური გამორთვა სკანირების დასრულების შემდეგ**
         stopScanner(false);
-    } else {
-        logMessage("გასუფთავება საჭიროა ახალი ოპერაციის დასაწყებად.", 'warning');
-        return;
-    }
+    } 
     
     updateStatusDisplay();
 }
 
-// --- კამერის ფუნქციები ---
+// --- კამერის ფუნქციები (User-Friendly ლოგირებით) ---
 
 async function startScanner() {
     if (isScannerActive || !document.getElementById('reader') || distributeView.classList.contains('hidden-view')) return;
     
-    // ვიყენებთ ზოგად facingMode-ს
     const cameraRequest = { facingMode: "environment" };
 
     html5Qrcode.start(cameraRequest, config, onScanSuccess)
@@ -115,12 +130,12 @@ async function startScanner() {
             cameraToggleButton.classList.remove('start-btn');
             cameraToggleButton.classList.add('stop-btn');
             cameraToggleButton.disabled = false;
-            logMessage("კამერა ჩაირთო. გთხოვთ, დაასკანეროთ ნივთის QR.", 'info');
+            // **User-Friendly: მკაფიო მითითება, რა უნდა დასკანერდეს პირველ რიგში**
+            logMessage("კამერა ჩაირთო. **გთხოვთ, დაასკანეროთ ნივთის QR.**", 'info');
         })
         .catch(err => {
             isScannerActive = false;
             logMessage(`❌ კამერის გაშვების შეცდომა: ${err.name}. ${err.message}`, 'error');
-            console.error("Scanner Start Error:", err);
             cameraToggleButton.innerHTML = '<span class="icon">❌</span> ვერ ჩაირთო';
             cameraToggleButton.disabled = true;
         });
@@ -151,7 +166,7 @@ function stopScanner(shouldLog = true) {
     }
 }
 
-// --- მენიუს და ნივთების ლოგიკა ---
+// --- მენიუს და ნივთების ლოგიკა (უცვლელია) ---
 
 function switchView(viewName) {
     const views = {
@@ -210,7 +225,7 @@ async function loadInventory() {
 // --- ინიციალიზაცია და ღილაკების დამმუშავებლები ---
 
 saveButton.addEventListener('click', async () => {
-    saveButton.disabled = true;
+    // SaveData-ში უკვე ხდება saveButton.disabled = true;
     await saveData();
 });
 
@@ -242,5 +257,5 @@ cameraToggleButton.addEventListener('click', () => {
 window.onload = () => {
     updateStatusDisplay();
     switchView('distribute'); 
-    logMessage("აპლიკაცია ჩაიტვირთა. კამერის ჩასართავად დააჭირეთ ღილაკს.", 'info');
+    logMessage("აპლიკაცია ჩაიტვირთა. დააჭირეთ 'კამერის ჩართვა'.", 'info');
 };
