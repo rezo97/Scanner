@@ -1,4 +1,4 @@
-// script.js (აღდგენილი ლოგიკა, რომელიც კამერას რთავდა)
+// script.js (ოპტიმიზებული ვერსია სკანირებისთვის)
 
 // გლობალური ცვლადები
 let currentItemID = null;
@@ -23,11 +23,12 @@ const inventoryList = document.getElementById('inventory-list');
 // QR სკანერის ინსტანცია
 const html5Qrcode = new Html5Qrcode("reader");
 
-// კონფიგურაცია - გამოყენებულია ის პარამეტრები, რომლებიც მუშაობდა
+// კონფიგურაცია - ოპტიმიზებული ვერსია სკანირების გასაუმჯობესებლად
 const config = { 
-    fps: 10, 
-    qrbox: { width: 300, height: 300 }, // გაზრდილი ზომა
-    aspectRatio: 1.0, 
+    fps: 15, // გაზრდილი კადრი წამში
+    qrbox: { width: 250, height: 250 }, // ოპტიმალური ყუთის ზომა
+    aspectRatio: 1.777778, // 16:9 ასპექტის თანაფარდობა
+    disableFlip: false, // არ უნდა გამორთოთ სარკისებური ჩვენება
     verbose: true     
 };
 
