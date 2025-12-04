@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>საწყობის მართვის აპლიკაცია</title>
+    <title>📦 საწყობის სკანერი</title>
     <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
 
@@ -21,15 +22,24 @@
             <h2>📍 ნივთის თაროზე განთავსება</h2>
             
             <div id="scanner-container">
-                <div id="reader" style="width: 100%; max-width: 400px; height: auto;"></div>
+                <div id="reader"></div> 
+                
+                <button id="camera-toggle-button" class="action-btn start-btn">
+                    <span class="icon">▶️</span> კამერის ჩართვა
+                </button>
             </div>
             
             <div id="status-area">
                 <h3>მიმდინარე სტატუსი:</h3>
-                <p id="item-status">**ნივთის QR (ID):** არ დასკანერებულა</p>
-                <p id="shelf-status">**თაროს QR (ID):** არ დასკანერებულა</p>
-                <button id="save-button" disabled>დამაგრება</button>
-                <button id="reset-button">გასუფთავება</button>
+                <div class="status-box">
+                    <p id="item-status">**ნივთის QR (ID):** არ დასკანერებულა</p>
+                    <p id="shelf-status">**თაროს QR (ID):** არ დასკანერებულა</p>
+                </div>
+                
+                <div class="action-buttons">
+                    <button id="save-button" class="action-btn primary-btn" disabled>💾 დამაგრება</button>
+                    <button id="reset-button" class="action-btn secondary-btn">🔄 გასუფთავება</button>
+                </div>
             </div>
 
             <div id="message-log">
@@ -38,20 +48,9 @@
 
         <section id="items-view" class="hidden-view">
             <h2>📄 საწყობის ჩანაწერები</h2>
-            <p>ამ გვერდზე გამოჩნდება ყველა ნივთის სია და მისი მიმდინარე თარო.</p>
-            <button id="load-items-button">ჩანაწერების ჩატვირთვა</button>
+            <button id="load-items-button" class="action-btn secondary-btn">ჩანაწერების განახლება</button>
             <div id="inventory-list">
                 </div>
         </section>
 
     </main>
-
-    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
-
-    <script src="https://unpkg.com/html5-qrcode"></script>
-
-    <script src="firebase-config.js"></script>
-    <script src="script.js"></script>
-</body>
-</html>
