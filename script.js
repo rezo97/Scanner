@@ -1,4 +1,4 @@
-// script.js (User-Friendly და ოპტიმიზებული ვერსია Order ID-ის ლოგიკით)
+// script.js (სრული ლოგიკა - Order ID, ძიება, UX)
 
 // გლობალური ცვლადები
 let currentItemID = null;
@@ -37,8 +37,9 @@ let isScannerActive = false;
 // --- ლოგიკური ფუნქციები ---
 
 function updateStatusDisplay() {
+    // სტატუსის ჩვენება იყენებს Order ID-ის ტერმინოლოგიას
     itemStatusEl.innerHTML = `**Order ID:** ${currentItemID || 'არ დასკანერებულა'}`;
-    shelfStatusEl.innerHTML = `**თაროს QR (ID):** ${currentShelfID || 'არ დასკანერებულა'}`;
+    shelfStatusEl.innerHTML = `**თაროს ID:** ${currentShelfID || 'არ დასკანერებულა'}`;
     saveButton.disabled = !(currentItemID && currentShelfID); 
 }
 
@@ -70,9 +71,10 @@ async function saveData() {
     saveButton.innerHTML = '...შენახვა'; 
 
     try {
+        // შეამოწმეთ, რომ "db" ცვლადი გლობალურადაა განსაზღვრული firebase-config.js-ში!
         const timestamp = firebase.firestore.FieldValue.serverTimestamp();
         
-        // *** .add() მეთოდის გამოყენება უზრუნველყოფს უნიკალურ ჩანაწერს ყოველ ჯერზე ***
+        // .add() მეთოდის გამოყენება უზრუნველყოფს უნიკალურ ჩანაწერს ყოველ ჯერზე
         await db.collection("inventory").add({ 
             orderID: currentItemID, // ItemID გამოიყენება OrderID-ის აღსანიშნავად
             shelfID: currentShelfID,
@@ -101,15 +103,16 @@ function onScanSuccess(decodedText, decodedResult) {
             return;
         }
         currentShelfID = scannedID;
-        logMessage(`**თაროს QR დასკანერდა:** **${currentShelfID}**. დააჭირეთ 'დამაგრებას'.`, 'info');
+        logMessage(`**თაროს ID დასკანერდა:** **${currentShelfID}**. დააჭირეთ 'დამაგრებას'.`, 'info');
         
+        // ავტომატური გამორთვა სკანირების დასრულების შემდეგ
         stopScanner(false);
     } 
     
     updateStatusDisplay();
 }
 
-// --- კამერის ფუნქციები (User-Friendly ლოგირებით) ---
+// --- კამერის ფუნქციები ---
 
 async function startScanner() {
     if (isScannerActive || !document.getElementById('reader') || distributeView.classList.contains('hidden-view')) return;
@@ -181,25 +184,24 @@ function switchView(viewName) {
     }
 }
 
-// ინვენტარის ჩატვირთვა
 async function loadInventory() {
     const viewContainer = document.getElementById('items-view');
-    const filterInput = document.getElementById('inventory-filter-input');
+    let filterInput = document.getElementById('inventory-filter-input');
     
-    // 1. საძიებო ველის შექმნა (თუ არ არსებობს)
+    // საძიებო ველის შექმნა (თუ არ არსებობს)
     if (!filterInput) {
         const inputHTML = `
             <input type="text" id="inventory-filter-input" placeholder="მოძებნეთ Order ID-ით..." 
-                   style="width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px;">
+                   style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box; font-size: 15px;">
         `;
         // ჩავსვათ ღილაკსა და სია კონტეინერს შორის
         viewContainer.insertBefore(document.createRange().createContextualFragment(inputHTML), inventoryList);
         
-        const newFilterInput = document.getElementById('inventory-filter-input');
+        filterInput = document.getElementById('inventory-filter-input');
         
         // დავამატოთ Event Listener ძიებისთვის (keyup)
-        newFilterInput.addEventListener('keyup', () => {
-            filterInventory(newFilterInput.value);
+        filterInput.addEventListener('keyup', () => {
+            filterInventory(filterInput.value);
         });
     }
     
@@ -213,8 +215,8 @@ async function loadInventory() {
             return;
         }
 
-        // შევინახოთ ყველა ნივთი, რათა შევძლოთ ადგილობრივი ფილტრაცია
         const items = [];
+        // docId-ის შენახვა ფილტრაციისთვის (იგივე Order ID-ის ნივთების ამოსაცნობად)
         snapshot.forEach(doc => items.push({ ...doc.data(), docId: doc.id }));
         
         renderInventoryList(items);
@@ -225,7 +227,6 @@ async function loadInventory() {
     }
 }
 
-// სიის გამოტანა (რენდერინგი)
 function renderInventoryList(items) {
     const listContainer = document.getElementById('inventory-list');
     listContainer.innerHTML = ''; 
@@ -233,7 +234,6 @@ function renderInventoryList(items) {
     let html = '';
     
     items.forEach(data => {
-        // ჩვენ ვვარაუდობთ, რომ Order ID არის "orderID" ველში
         const orderId = data.orderID || 'N/A'; 
         const lastMoved = data.lastMoved ? data.lastMoved.toDate().toLocaleString('ka-GE') : 'N/A';
         
@@ -244,11 +244,10 @@ function renderInventoryList(items) {
 
         let statusText = '';
         if (otherItems.length > 0) {
-            // უნიკალური თაროების სიის მიღება
             const otherShelves = [...new Set(otherItems.map(i => i.shelfID))].join(', ');
             
-            // User-Friendly: გაფრთხილება, თუ სხვა ნივთები სხვაგანაა
-            statusText = `<span class="message-warning" style="display:block; padding: 5px; margin-top: 5px; font-size: 0.9em; border-radius: 4px;">
+            // გაფრთხილება, თუ სხვა ნივთები სხვაგანაა
+            statusText = `<span class="message-warning" style="display:block; padding: 8px; margin-top: 8px; font-size: 0.9em; border-radius: 4px; border: none;">
                             ⚠️ Order ID-ის სხვა ნივთები ნაპოვნია თაროებზე: ${otherShelves}
                           </span>`;
         }
@@ -256,7 +255,7 @@ function renderInventoryList(items) {
         html += `
             <div data-order-id="${orderId}">
                 <strong>Order ID:</strong> ${orderId}<br>
-                <strong>თარო:</strong> <span style="font-size: 1.1em; color: var(--success-color);">${data.shelfID}</span><br>
+                <strong>თარო:</strong> <span style="font-size: 1.1em; color: var(--primary-color);">${data.shelfID}</span><br>
                 <small>ბოლო განთავსება: ${lastMoved}</small>
                 ${statusText}
             </div>
@@ -266,7 +265,6 @@ function renderInventoryList(items) {
     listContainer.innerHTML = html;
 }
 
-// ძიების ფუნქცია
 function filterInventory(searchTerm) {
     const term = searchTerm.toLowerCase().trim();
     const items = document.querySelectorAll('#inventory-list > div');
