@@ -1,4 +1,4 @@
-// script.js (ფინალური გამართული ვერსია კამერასთან დაკავშირებით)
+// script.js (გამარტივებული ვერსია)
 
 // გლობალური ცვლადები
 let currentItemID = null;
@@ -23,15 +23,14 @@ const inventoryList = document.getElementById('inventory-list');
 // QR სკანერის ინსტანცია
 const html5Qrcode = new Html5Qrcode("reader");
 
+// კონფიგურაცია - მაქსიმალურად გამარტივებული
 const config = { 
     fps: 10, 
-    qrbox: { width: 250, height: 250 }, 
-    aspectRatio: 1.0, 
-    verbose: true     
+    // წინა პრობლემური პარამეტრები ამოღებულია
 };
 
 let isScannerActive = false; 
-let cameraId = null; // კამერის ID-ის შესანახად
+let cameraId = null; 
 
 // --- ლოგიკური ფუნქციები ---
 
@@ -101,7 +100,7 @@ function onScanSuccess(decodedText, decodedResult) {
 
 // --- კამერის ფუნქციები ---
 
-// კამერის ID-ის მიღება (ეს აიძულებს ბრაუზერს ნებართვა ითხოვოს)
+// კამერის ID-ის მიღება (ეს ითხოვს ნებართვას)
 async function getCameraId() {
     try {
         const devices = await Html5Qrcode.getCameras();
@@ -110,12 +109,12 @@ async function getCameraId() {
             const backCamera = devices.find(device => 
                 device.label.toLowerCase().includes('back') || 
                 device.label.toLowerCase().includes('environment') || 
-                devices.length === 1 // თუ მხოლოდ ერთია, ის იქნება
+                devices.length === 1 
             );
             cameraId = backCamera ? backCamera.id : devices[0].id;
         }
     } catch (err) {
-        // თუ ნებართვა არ არის, აქ დაგვიბრუნდება შეცდომა (NotAllowedError)
+        // თუ ნებართვა არ არის, აქ დაგვიბრუნდება შეცდომა
         logMessage(`❌ კამერის მოთხოვნის შეცდომა: ${err.name}. ${err.message}`, 'error');
         console.error("getCameraError:", err);
         return null;
@@ -182,7 +181,61 @@ function stopScanner(shouldLog = true) {
     }
 }
 
-// ... (switchView, loadInventory ფუნქციები უცვლელია)
+// --- მენიუს და ნივთების ლოგიკა ---
+
+function switchView(viewName) {
+    const views = {
+        'distribute': { view: distributeView, btn: navDistributeBtn },
+        'items': { view: itemsView, btn: navItemsBtn }
+    };
+
+    for (const name in views) {
+        views[name].view.classList.remove('active-view');
+        views[name].view.classList.add('hidden-view');
+        views[name].btn.classList.remove('active');
+    }
+
+    views[viewName].view.classList.add('active-view');
+    views[viewName].view.classList.remove('hidden-view');
+    views[viewName].btn.classList.add('active');
+
+    if (viewName !== 'distribute') {
+        stopScanner(false);
+    }
+}
+
+async function loadInventory() {
+    inventoryList.innerHTML = '<h4>ჩატვირთვა...</h4>';
+
+    try {
+        const snapshot = await db.collection("inventory").orderBy("lastMoved", "desc").get();
+        
+        if (snapshot.empty) {
+            inventoryList.innerHTML = '<p>ჩანაწერები არ მოიძებნა.</p>';
+            return;
+        }
+
+        let html = '';
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const lastMoved = data.lastMoved ? data.lastMoved.toDate().toLocaleString('ka-GE') : 'N/A';
+            
+            html += `
+                <div>
+                    <strong>ნივთის ID:</strong> ${data.itemID}<br>
+                    <strong>თარო:</strong> <span>${data.shelfID}</span><br>
+                    <small>ბოლო განთავსება: ${lastMoved}</small>
+                </div>
+            `;
+        });
+
+        inventoryList.innerHTML = html;
+
+    } catch (error) {
+        inventoryList.innerHTML = `<p class="message-error">შეცდომა ჩატვირთვისას: ${error.message}</p>`;
+        console.error("Error loading inventory: ", error);
+    }
+}
 
 // --- ინიციალიზაცია და ღილაკების დამმუშავებლები ---
 
