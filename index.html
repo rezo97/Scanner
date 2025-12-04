@@ -10,23 +10,40 @@
 
     <header>
         <h1>📦 საწყობის ფიქერის სისტემა</h1>
+        <nav>
+            <button id="nav-distribute" class="active">📍 გადანაწილება</button>
+            <button id="nav-items">📄 ნივთები</button>
+        </nav>
     </header>
 
     <main>
-        <div id="scanner-container">
-            <div id="reader" style="width:300px; height:300px;"></div>
-        </div>
-        
-        <div id="status-area">
-            <h2>მიმდინარე სტატუსი:</h2>
-            <p id="item-status">**ნივთის QR (ID):** არ დასკანერებულა</p>
-            <p id="shelf-status">**თაროს QR (ID):** არ დასკანერებულა</p>
-            <button id="save-button" disabled>დამაგრება</button>
-            <button id="reset-button">გასუფთავება</button>
-        </div>
-
-        <div id="message-log">
+        <section id="distribute-view" class="active-view">
+            <h2>📍 ნივთის თაროზე განთავსება</h2>
+            
+            <div id="scanner-container">
+                <div id="reader" style="width: 100%; max-width: 400px; height: auto;"></div>
             </div>
+            
+            <div id="status-area">
+                <h3>მიმდინარე სტატუსი:</h3>
+                <p id="item-status">**ნივთის QR (ID):** არ დასკანერებულა</p>
+                <p id="shelf-status">**თაროს QR (ID):** არ დასკანერებულა</p>
+                <button id="save-button" disabled>დამაგრება</button>
+                <button id="reset-button">გასუფთავება</button>
+            </div>
+
+            <div id="message-log">
+                </div>
+        </section>
+
+        <section id="items-view" class="hidden-view">
+            <h2>📄 საწყობის ჩანაწერები</h2>
+            <p>ამ გვერდზე გამოჩნდება ყველა ნივთის სია და მისი მიმდინარე თარო.</p>
+            <button id="load-items-button">ჩანაწერების ჩატვირთვა</button>
+            <div id="inventory-list">
+                </div>
+        </section>
+
     </main>
 
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
