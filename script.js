@@ -1,11 +1,10 @@
-// script.js (გამართული ვერსია კამერის ნებართვის პრობლემის მოსაგვარებლად)
+// script.js (ფინალური გამართული ვერსია კამერასთან დაკავშირებით)
 
 // გლობალური ცვლადები
 let currentItemID = null;
 let currentShelfID = null;
-let cameraId = null; // კამერის ID შესანახად
 
-// ... (DOM ელემენტები უცვლელია)
+// DOM ელემენტები
 const itemStatusEl = document.getElementById('item-status');
 const shelfStatusEl = document.getElementById('shelf-status');
 const saveButton = document.getElementById('save-button');
@@ -13,7 +12,7 @@ const resetButton = document.getElementById('reset-button');
 const messageLog = document.getElementById('message-log');
 const cameraToggleButton = document.getElementById('camera-toggle-button'); 
 
-// ... (ნავიგაციის ელემენტები უცვლელია)
+// ნავიგაციის ელემენტები
 const navDistributeBtn = document.getElementById('nav-distribute');
 const navItemsBtn = document.getElementById('nav-items');
 const distributeView = document.getElementById('distribute-view');
@@ -32,41 +31,113 @@ const config = {
 };
 
 let isScannerActive = false; 
+let cameraId = null; // კამერის ID-ის შესანახად
 
-// ... (updateStatusDisplay, logMessage, resetData, saveData, onScanSuccess ფუნქციები უცვლელია)
+// --- ლოგიკური ფუნქციები ---
 
+function updateStatusDisplay() {
+    itemStatusEl.innerHTML = `**ნივთის QR (ID):** ${currentItemID || 'არ დასკანერებულა'}`;
+    shelfStatusEl.innerHTML = `**თაროს QR (ID):** ${currentShelfID || 'არ დასკანერებულა'}`;
+    saveButton.disabled = !(currentItemID && currentShelfID);
+}
 
-// --- QR სკანერი ლოგიკა ---
+function logMessage(message, type = 'info') {
+    const p = document.createElement('p');
+    p.innerHTML = message;
+    p.className = `message-${type}`;
+    messageLog.prepend(p);
+    setTimeout(() => p.remove(), 10000);
+}
 
-// სკანერის გაშვება (გამართული)
-async function startScanner() {
-    if (isScannerActive || !document.getElementById('reader')) return;
-    if (distributeView.classList.contains('hidden-view')) return;
+function resetData() {
+    currentItemID = null;
+    currentShelfID = null;
+    updateStatusDisplay();
+    logMessage("სტატუსი გასუფთავდა. მზადაა ახალი სკანირებისთვის. ჩართეთ კამერა.", 'info');
+}
 
-    // ვცდილობთ კამერის მოწყობილობის ID-ის მიღებას
-    if (!cameraId) {
-        try {
-            const devices = await Html5Qrcode.getCameras();
-            if (devices && devices.length) {
-                // ვცდილობთ უკანა კამერის არჩევას
-                const backCamera = devices.find(device => device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('environment'));
-                cameraId = backCamera ? backCamera.id : devices[0].id; // თუ ვერ ვპოულობთ უკანა კამერას, ვირჩევთ პირველს
-            }
-        } catch (err) {
-            logMessage(`❌ კამერების სიის მიღების შეცდომა: ${err.message}`, 'error');
-            // თუ ვერ მივიღეთ ID, ვიყენებთ ზოგად facingMode-ს
-            cameraId = { facingMode: "environment" };
-        }
+async function saveData() {
+    if (!currentItemID || !currentShelfID) return;
+
+    try {
+        const timestamp = firebase.firestore.FieldValue.serverTimestamp();
+        
+        await db.collection("inventory").doc(currentItemID).set({
+            itemID: currentItemID,
+            shelfID: currentShelfID,
+            lastMoved: timestamp
+        });
+
+        logMessage(`✅ წარმატება: ნივთი **${currentItemID}** დამაგრდა თაროზე **${currentShelfID}**`, 'success');
+        resetData(); 
+        
+    } catch (error) {
+        logMessage(`❌ Firebase შეცდომა: ${error.message}`, 'error');
     }
+}
 
-    if (!cameraId) {
-        logMessage("❌ კამერა ვერ მოიძებნა. გთხოვთ, შეამოწმოთ მოწყობილობის ნებართვები.", 'error');
-        cameraToggleButton.innerHTML = '<span class="icon">❌</span> ვერ მოიძებნა';
-        cameraToggleButton.disabled = true;
+function onScanSuccess(decodedText, decodedResult) {
+    const scannedID = decodedText.trim();
+    
+    if (!currentItemID) {
+        currentItemID = scannedID;
+        logMessage(`**ნივთის QR დასკანერდა:** **${currentItemID}**`);
+    } else if (!currentShelfID) {
+        if (scannedID === currentItemID) {
+            logMessage("გაფრთხილება: ნივთი და თარო ვერ იქნება ერთი და იგივე კოდი.", 'warning');
+            return;
+        }
+        currentShelfID = scannedID;
+        logMessage(`**თაროს QR დასკანერდა:** **${currentShelfID}**`);
+        
+        stopScanner(false);
+    } else {
+        logMessage("გასუფთავება საჭიროა ახალი ოპერაციის დასაწყებად.", 'warning');
         return;
     }
+    
+    updateStatusDisplay();
+}
 
-    // ვცდილობთ გაშვებას კამერის ID-ით ან ზოგადი პარამეტრით
+// --- კამერის ფუნქციები ---
+
+// კამერის ID-ის მიღება (ეს აიძულებს ბრაუზერს ნებართვა ითხოვოს)
+async function getCameraId() {
+    try {
+        const devices = await Html5Qrcode.getCameras();
+        if (devices && devices.length) {
+            // ვცდილობთ უკანა კამერის არჩევას
+            const backCamera = devices.find(device => 
+                device.label.toLowerCase().includes('back') || 
+                device.label.toLowerCase().includes('environment') || 
+                devices.length === 1 // თუ მხოლოდ ერთია, ის იქნება
+            );
+            cameraId = backCamera ? backCamera.id : devices[0].id;
+        }
+    } catch (err) {
+        // თუ ნებართვა არ არის, აქ დაგვიბრუნდება შეცდომა (NotAllowedError)
+        logMessage(`❌ კამერის მოთხოვნის შეცდომა: ${err.name}. ${err.message}`, 'error');
+        console.error("getCameraError:", err);
+        return null;
+    }
+    return cameraId;
+}
+
+
+// სკანერის გაშვება
+async function startScanner() {
+    if (isScannerActive || !document.getElementById('reader') || distributeView.classList.contains('hidden-view')) return;
+
+    // 1. ვცდილობთ კამერის ID-ის მიღებას
+    if (!cameraId) {
+        if (await getCameraId() === null) {
+            cameraToggleButton.innerHTML = '<span class="icon">🔒</span> ნებართვა უარყოფილია';
+            cameraToggleButton.disabled = true;
+            return;
+        }
+    }
+    
+    // 2. კამერის გაშვება ID-ით
     html5Qrcode.start(cameraId, config, onScanSuccess)
         .then(() => {
             isScannerActive = true;
@@ -78,14 +149,14 @@ async function startScanner() {
         })
         .catch(err => {
             isScannerActive = false;
-            logMessage(`❌ კამერის გაშვების შეცდომა: ${err.message}. შეამოწმეთ ნებართვები.`, 'error');
+            logMessage(`❌ კამერის გაშვების შეცდომა: ${err.name}. ${err.message}`, 'error');
             console.error("Scanner Start Error:", err);
             cameraToggleButton.innerHTML = '<span class="icon">❌</span> ვერ ჩაირთო';
             cameraToggleButton.disabled = true;
         });
 }
 
-// სკანერის შეჩერება (უცვლელია)
+// სკანერის შეჩერება
 function stopScanner(shouldLog = true) {
     if (html5Qrcode.isScanning) { 
         html5Qrcode.stop().then(() => {
@@ -111,9 +182,7 @@ function stopScanner(shouldLog = true) {
     }
 }
 
-
 // ... (switchView, loadInventory ფუნქციები უცვლელია)
-
 
 // --- ინიციალიზაცია და ღილაკების დამმუშავებლები ---
 
@@ -137,7 +206,6 @@ navItemsBtn.addEventListener('click', () => {
 
 loadItemsButton.addEventListener('click', loadInventory);
 
-// კამერის ჩართვა/გამორთვა ღილაკით
 cameraToggleButton.addEventListener('click', () => {
     if (isScannerActive) {
         stopScanner(true);
