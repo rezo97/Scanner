@@ -1,4 +1,4 @@
-/* style.css (სრულიად ჩაანაცვლეთ არსებული კოდი) */
+/* style.css */
 
 :root {
     --primary-color: #007bff;
@@ -88,11 +88,19 @@ main {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
-/* სკანერის ვიდეო არე */
+/* სკანერის ვიდეო არე - ფიქსირებული ზომები */
 #reader {
     width: 100%;
-    height: 300px; /* ფიქსირებული სიმაღლე */
+    height: 350px; 
+    background-color: #000; /* შავი ფონი, თუ კამერა არ ირთვება */
 }
+
+/* დავრწმუნდეთ, რომ შიგნით არსებული ელემენტები იკავებენ სრულ სივრცეს */
+#reader video, #reader canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
 
 .status-box {
     background-color: #f1f8ff;
