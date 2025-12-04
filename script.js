@@ -1,4 +1,4 @@
-// script.js (გამარტივებული ვერსია)
+// script.js (ვერსია, რომელიც კამერას რთავს, მაგრამ იყენებს ღილაკის მართვას)
 
 // გლობალური ცვლადები
 let currentItemID = null;
@@ -23,16 +23,17 @@ const inventoryList = document.getElementById('inventory-list');
 // QR სკანერის ინსტანცია
 const html5Qrcode = new Html5Qrcode("reader");
 
-// კონფიგურაცია - მაქსიმალურად გამარტივებული
+// კონფიგურაცია - გამოყენებულია ის პარამეტრები, რომლებიც მუშაობდა სკანერის გაშვებისას
 const config = { 
     fps: 10, 
-    // წინა პრობლემური პარამეტრები ამოღებულია
+    qrbox: { width: 300, height: 300 }, // გაზრდილი ზომა სკანირების გასაუმჯობესებლად
+    aspectRatio: 1.0, 
+    verbose: true     
 };
 
 let isScannerActive = false; 
-let cameraId = null; 
 
-// --- ლოგიკური ფუნქციები ---
+// --- ლოგიკური ფუნქციები (უცვლელია) ---
 
 function updateStatusDisplay() {
     itemStatusEl.innerHTML = `**ნივთის QR (ID):** ${currentItemID || 'არ დასკანერებულა'}`;
@@ -100,44 +101,15 @@ function onScanSuccess(decodedText, decodedResult) {
 
 // --- კამერის ფუნქციები ---
 
-// კამერის ID-ის მიღება (ეს ითხოვს ნებართვას)
-async function getCameraId() {
-    try {
-        const devices = await Html5Qrcode.getCameras();
-        if (devices && devices.length) {
-            // ვცდილობთ უკანა კამერის არჩევას
-            const backCamera = devices.find(device => 
-                device.label.toLowerCase().includes('back') || 
-                device.label.toLowerCase().includes('environment') || 
-                devices.length === 1 
-            );
-            cameraId = backCamera ? backCamera.id : devices[0].id;
-        }
-    } catch (err) {
-        // თუ ნებართვა არ არის, აქ დაგვიბრუნდება შეცდომა
-        logMessage(`❌ კამერის მოთხოვნის შეცდომა: ${err.name}. ${err.message}`, 'error');
-        console.error("getCameraError:", err);
-        return null;
-    }
-    return cameraId;
-}
-
-
-// სკანერის გაშვება
+// სკანერის გაშვება (პირვანდელი, სამუშაო ლოგიკა)
 async function startScanner() {
+    // შემოწმება, რომ კამერა უკვე არ არის აქტიური
     if (isScannerActive || !document.getElementById('reader') || distributeView.classList.contains('hidden-view')) return;
-
-    // 1. ვცდილობთ კამერის ID-ის მიღებას
-    if (!cameraId) {
-        if (await getCameraId() === null) {
-            cameraToggleButton.innerHTML = '<span class="icon">🔒</span> ნებართვა უარყოფილია';
-            cameraToggleButton.disabled = true;
-            return;
-        }
-    }
     
-    // 2. კამერის გაშვება ID-ით
-    html5Qrcode.start(cameraId, config, onScanSuccess)
+    // ვიყენებთ ზოგად facingMode-ს, რომელიც თავდაპირველად მუშაობდა
+    const cameraRequest = { facingMode: "environment" };
+
+    html5Qrcode.start(cameraRequest, config, onScanSuccess)
         .then(() => {
             isScannerActive = true;
             cameraToggleButton.innerHTML = '<span class="icon">⏹️</span> კამერის გამორთვა';
@@ -155,8 +127,9 @@ async function startScanner() {
         });
 }
 
-// სკანერის შეჩერება
+// სკანერის შეჩერება (შენარჩუნებული მართვის ლოგიკა)
 function stopScanner(shouldLog = true) {
+    // html5Qrcode.isScanning შემოწმება უკვე გვაქვს
     if (html5Qrcode.isScanning) { 
         html5Qrcode.stop().then(() => {
             isScannerActive = false;
@@ -181,7 +154,7 @@ function stopScanner(shouldLog = true) {
     }
 }
 
-// --- მენიუს და ნივთების ლოგიკა ---
+// --- მენიუს და ნივთების ლოგიკა (უცვლელია) ---
 
 function switchView(viewName) {
     const views = {
@@ -237,7 +210,7 @@ async function loadInventory() {
     }
 }
 
-// --- ინიციალიზაცია და ღილაკების დამმუშავებლები ---
+// --- ინიციალიზაცია და ღილაკების დამმუშავებლები (უცვლელია) ---
 
 saveButton.addEventListener('click', async () => {
     saveButton.disabled = true;
