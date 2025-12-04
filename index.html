@@ -22,7 +22,7 @@
             <h2>📍 ნივთის თაროზე განთავსება</h2>
             
             <div id="scanner-container">
-                <div id="reader" style="width: 100%; height: 300px;"></div> 
+                <div id="reader"></div> 
                 
                 <button id="camera-toggle-button" class="action-btn start-btn">
                     <span class="icon">▶️</span> კამერის ჩართვა
@@ -45,3 +45,21 @@
             <div id="message-log">
                 </div>
         </section>
+
+        <section id="items-view" class="hidden-view">
+            <h2>📄 საწყობის ჩანაწერები</h2>
+            <button id="load-items-button" class="action-btn secondary-btn">ჩანაწერების განახლება</button>
+            <div id="inventory-list">
+                </div>
+        </section>
+
+    </main>
+
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+
+    <script src="firebase-config.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
