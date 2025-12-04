@@ -1,81 +1,201 @@
-/* style.css (დაამატეთ არსებულ კოდს ან შეცვალეთ) */
+/* style.css (სრულიად ჩაანაცვლეთ არსებული კოდი) */
+
+:root {
+    --primary-color: #007bff;
+    --primary-hover: #0056b3;
+    --success-color: #28a745;
+    --danger-color: #dc3545;
+    --background-color: #f8f9fa;
+    --card-background: #ffffff;
+    --text-color: #343a40;
+    --border-color: #e9ecef;
+}
+
 body {
-    font-family: Arial, sans-serif;
+    font-family: 'Roboto', sans-serif;
+    background-color: var(--background-color);
+    margin: 0;
+    padding: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 20px;
-    background-color: #f4f4f9;
+    color: var(--text-color);
 }
+
 header {
     width: 100%;
     max-width: 500px;
     text-align: center;
-    margin-bottom: 20px;
+    padding: 20px 0;
 }
-/* მენიუს სტილები */
+
+h1 {
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 15px;
+}
+
+/* --- ნავიგაცია --- */
 nav {
     display: flex;
     justify-content: center;
+    border-bottom: 2px solid var(--border-color);
     margin-bottom: 20px;
 }
+
 nav button {
-    padding: 10px 15px;
-    margin: 0 5px;
-    background-color: #ddd;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+    padding: 12px 20px;
+    margin: 0;
+    background-color: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
     cursor: pointer;
     font-size: 16px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    color: var(--text-color);
 }
+
+nav button:hover {
+    color: var(--primary-color);
+    background-color: #e9f5ff;
+}
+
 nav button.active {
-    background-color: #007bff;
-    color: white;
-    border-color: #007bff;
+    color: var(--primary-color);
+    border-bottom: 3px solid var(--primary-color);
+    background-color: var(--card-background);
 }
 
+/* --- მთავარი კონტენტი --- */
 main {
-    background: white;
-    padding: 30px;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    background: var(--card-background);
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     max-width: 500px;
-    width: 100%;
-}
-/* გვერდების გადართვის სტილები */
-.hidden-view {
-    display: none;
-}
-.active-view {
-    display: block;
+    width: 90%;
+    margin-bottom: 30px;
 }
 
-/* არსებული სტილები */
+/* --- სკანერი და სტატუსი --- */
 #scanner-container {
-    margin-bottom: 20px;
-    display: flex;
-    justify-content: center;
+    margin-bottom: 25px;
+    text-align: center;
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
+
+/* სკანერის ვიდეო არე */
 #reader {
     width: 100%;
-    max-width: 300px;
+    height: 300px; /* ფიქსირებული სიმაღლე */
 }
-button {
-    /* ... არსებული ღილაკის სტილები ... */
-    padding: 10px 15px;
+
+.status-box {
+    background-color: #f1f8ff;
+    border-left: 5px solid var(--primary-color);
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+#item-status, #shelf-status {
+    margin: 5px 0;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* --- ღილაკები --- */
+.action-buttons {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.action-btn {
+    padding: 12px 20px;
     border: none;
-    border-radius: 4px;
+    border-radius: 8px;
     cursor: pointer;
-    margin-right: 10px;
-    font-weight: bold;
+    font-weight: 600;
+    font-size: 16px;
+    transition: background-color 0.3s ease, transform 0.1s;
+    flex-grow: 1;
 }
-/* ... დანარჩენი სტილები ... */
-#inventory-list div {
-    border: 1px solid #eee;
+
+.action-btn:active {
+    transform: scale(0.98);
+}
+
+.primary-btn {
+    background-color: var(--success-color);
+    color: white;
+}
+.primary-btn:hover {
+    background-color: #1e7e34;
+}
+.primary-btn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+.secondary-btn {
+    background-color: #6c757d;
+    color: white;
+}
+.secondary-btn:hover {
+    background-color: #5a6268;
+}
+
+/* კამერის მართვის ღილაკი */
+#camera-toggle-button {
+    width: 100%;
+    margin-top: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.start-btn {
+    background-color: var(--primary-color);
+    color: white;
+}
+.stop-btn {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+/* --- შეტყობინებები --- */
+#message-log {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border-color);
+}
+#message-log p {
     padding: 10px;
-    margin-bottom: 5px;
-    border-radius: 4px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+.message-info { background-color: #e8f5e9; color: #1b5e20; }
+.message-success { background-color: #d4edda; color: var(--success-color); border: 1px solid #c3e6cb; }
+.message-error { background-color: #f8d7da; color: var(--danger-color); border: 1px solid #f5c6cb; }
+.message-warning { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+
+/* --- ნივთების სია --- */
+#inventory-list div {
+    background-color: var(--card-background);
+    border: 1px solid var(--border-color);
+    padding: 12px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 #inventory-list strong {
-    color: #007bff;
+    color: var(--primary-color);
+    display: block;
+    margin-bottom: 3px;
+    font-size: 15px;
 }
