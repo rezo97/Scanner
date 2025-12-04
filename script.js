@@ -1,4 +1,5 @@
-// script.js (ჩაანაცვლეთ არსებული კოდი სრულად)
+// script.js
+// მოიცავს QR სკანერის ლოგიკას, Firebase-თან ურთიერთობას და მენიუს მართვას.
 
 // გლობალური ცვლადები
 let currentItemID = null;
@@ -21,10 +22,16 @@ const inventoryList = document.getElementById('inventory-list');
 
 // QR სკანერის ინსტანცია
 const html5Qrcode = new Html5Qrcode("reader");
-const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+// განახლებული კონფიგურაცია QR-ის უკეთ ამოსაცნობად
+const config = { 
+    fps: 10, 
+    qrbox: { width: 300, height: 300 }, // ზომა გავზარდეთ
+    aspectRatio: 1.0, 
+    verbose: true     // დეტალური ლოგირება კონსოლში
+};
 
 let isScannerActive = false; // სკანერის მდგომარეობის შესანახი ცვლადი
-
 
 // --- ლოგიკური ფუნქციები ---
 
@@ -56,7 +63,6 @@ async function saveData() {
     try {
         const timestamp = firebase.firestore.FieldValue.serverTimestamp();
         
-        // ვინახავთ "inventory" კოლექციაში, სადაც დოკუმენტის ID იქნება ნივთის ID
         await db.collection("inventory").doc(currentItemID).set({
             itemID: currentItemID,
             shelfID: currentShelfID,
@@ -65,7 +71,7 @@ async function saveData() {
 
         logMessage(`✅ წარმატება: ნივთი ${currentItemID} დამაგრდა თაროზე ${currentShelfID}`, 'success');
         resetData(); 
-        startScanner(); // წარმატების შემდეგ სკანერის ავტომატური გაშვება
+        startScanner(); 
 
     } catch (error) {
         logMessage(`❌ Firebase შეცდომა: ${error.message}`, 'error');
@@ -76,7 +82,9 @@ async function saveData() {
 
 function onScanSuccess(decodedText, decodedResult) {
     const scannedID = decodedText.trim();
-    logMessage(`QR დასკანერდა: ${scannedID}`, 'info'); // დებუგირებისთვის
+    
+    // თუ კამერა წარმატებით მუშაობს, მაგრამ შედეგი მოდის, შეგვიძლია ეს ლოგი გამოიყენოთ
+    console.log(`QR დასკანერდა: ${scannedID}`); 
 
     if (!currentItemID) {
         // 1. ნივთის სკანირება
@@ -88,133 +96,4 @@ function onScanSuccess(decodedText, decodedResult) {
             logMessage("გაფრთხილება: ნივთი და თარო ვერ იქნება ერთი და იგივე კოდი.", 'warning');
             return;
         }
-        currentShelfID = scannedID;
-        logMessage(`**თაროს QR დასკანერდა:** ${currentShelfID}`);
-        
-        // თუ ორივე დასკანერებულია, სკანირების შეჩერება
-        stopScanner(false);
-    } else {
-        logMessage("გასუფთავება საჭიროა ახალი ოპერაციის დასაწყებად.", 'warning');
-        return;
-    }
-    
-    updateStatusDisplay();
-}
-
-// სკანერის გაშვება
-function startScanner() {
-    if (isScannerActive || !document.getElementById('reader')) return;
-    
-    html5Qrcode.start({ facingMode: "environment" }, config, onScanSuccess)
-        .then(() => {
-            isScannerActive = true;
-            logMessage("კამერა ჩაირთო. გთხოვთ, დაასკანეროთ ნივთის QR.", 'info');
-        })
-        .catch(err => {
-            isScannerActive = false;
-            logMessage(`❌ კამერის გაშვების შეცდომა. ${err.message}`, 'error');
-        });
-}
-
-// სკანერის შეჩერება
-function stopScanner(shouldLog = true) {
-    if (isScannerActive) {
-        html5Qrcode.stop().then(() => {
-            isScannerActive = false;
-            if (shouldLog) logMessage("სკანერი შეჩერდა.", 'info');
-        }).catch(err => {
-            logMessage(`სკანერის შეჩერების შეცდომა: ${err}`, 'error');
-        });
-    }
-}
-
-// --- მენიუს და ნივთების ლოგიკა ---
-
-// გვერდის გადამრთველი
-function switchView(viewName) {
-    const views = {
-        'distribute': { view: distributeView, btn: navDistributeBtn },
-        'items': { view: itemsView, btn: navItemsBtn }
-    };
-
-    for (const name in views) {
-        views[name].view.classList.remove('active-view');
-        views[name].view.classList.add('hidden-view');
-        views[name].btn.classList.remove('active');
-    }
-
-    views[viewName].view.classList.add('active-view');
-    views[viewName].view.classList.remove('hidden-view');
-    views[viewName].btn.classList.add('active');
-
-    // სკანერის მართვა გვერდების მიხედვით
-    if (viewName === 'distribute') {
-        startScanner();
-    } else {
-        stopScanner();
-    }
-}
-
-// ჩანაწერების ჩატვირთვა Firestore-დან
-async function loadInventory() {
-    inventoryList.innerHTML = 'ჩატვირთვა...';
-
-    try {
-        const snapshot = await db.collection("inventory").get();
-        
-        if (snapshot.empty) {
-            inventoryList.innerHTML = '<p>ჩანაწერები არ მოიძებნა.</p>';
-            return;
-        }
-
-        let html = '';
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            const lastMoved = data.lastMoved ? data.lastMoved.toDate().toLocaleString() : 'N/A';
-            
-            html += `
-                <div>
-                    <strong>ნივთის ID:</strong> ${data.itemID}<br>
-                    <strong>თარო:</strong> ${data.shelfID}<br>
-                    <small>ბოლო განთავსება: ${lastMoved}</small>
-                </div>
-            `;
-        });
-
-        inventoryList.innerHTML = html;
-
-    } catch (error) {
-        inventoryList.innerHTML = `<p class="message-error">შეცდომა ჩატვირთვისას: ${error.message}</p>`;
-        console.error("Error loading inventory: ", error);
-    }
-}
-
-
-// --- ინიციალიზაცია და ღილაკების დამმუშავებლები ---
-
-saveButton.addEventListener('click', async () => {
-    saveButton.disabled = true;
-    await saveData();
-});
-
-resetButton.addEventListener('click', () => {
-    resetData();
-    startScanner();
-});
-
-navDistributeBtn.addEventListener('click', () => {
-    switchView('distribute');
-});
-
-navItemsBtn.addEventListener('click', () => {
-    switchView('items');
-});
-
-loadItemsButton.addEventListener('click', loadInventory);
-
-// აპლიკაციის დაწყება
-window.onload = () => {
-    updateStatusDisplay();
-    switchView('distribute'); // ნაგულისხმევად გადანაწილების გვერდი
-    logMessage("აპლიკაცია ჩაიტვირთა.", 'info');
-};
+        currentShelfID = scanned
