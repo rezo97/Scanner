@@ -1,0 +1,54 @@
+/* style.css */
+body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    background-color: #f4f4f9;
+}
+main {
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    max-width: 500px;
+    width: 100%;
+}
+#scanner-container {
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: center;
+}
+#reader {
+    width: 100%;
+    max-width: 300px;
+}
+button {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-right: 10px;
+    font-weight: bold;
+}
+#save-button {
+    background-color: #4CAF50;
+    color: white;
+}
+#save-button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+#reset-button {
+    background-color: #f44336;
+    color: white;
+}
+#message-log {
+    margin-top: 20px;
+    border-top: 1px solid #eee;
+    padding-top: 15px;
+}
+.message-success { color: green; }
+.message-error { color: red; font-weight: bold; }
+.message-warning { color: orange; }
