@@ -1,4 +1,4 @@
-// script.js (User-Friendly და ოპტიმიზებული ვერსია)
+// script.js (User-Friendly და ოპტიმიზებული ვერსია Order ID-ის ლოგიკით)
 
 // გლობალური ცვლადები
 let currentItemID = null;
@@ -25,9 +25,9 @@ const html5Qrcode = new Html5Qrcode("reader");
 
 // კონფიგურაცია - ოპტიმიზებულია სკანირების სიჩქარისა და სიზუსტისთვის
 const config = { 
-    fps: 15, // გაზრდილი კადრი წამში
-    qrbox: { width: 250, height: 250 }, // ოპტიმალური ყუთის ზომა
-    aspectRatio: 1.777778, // 16:9 ასპექტის თანაფარდობა
+    fps: 15, 
+    qrbox: { width: 250, height: 250 }, 
+    aspectRatio: 1.777778, 
     disableFlip: false,
     verbose: true     
 };
@@ -37,9 +37,8 @@ let isScannerActive = false;
 // --- ლოგიკური ფუნქციები ---
 
 function updateStatusDisplay() {
-    itemStatusEl.innerHTML = `**ნივთის QR (ID):** ${currentItemID || 'არ დასკანერებულა'}`;
+    itemStatusEl.innerHTML = `**Order ID:** ${currentItemID || 'არ დასკანერებულა'}`;
     shelfStatusEl.innerHTML = `**თაროს QR (ID):** ${currentShelfID || 'არ დასკანერებულა'}`;
-    // "დამაგრება" აქტიურდება, როცა ორივე ID არსებობს
     saveButton.disabled = !(currentItemID && currentShelfID); 
 }
 
@@ -48,7 +47,6 @@ function logMessage(message, type = 'info') {
     p.innerHTML = message;
     p.className = `message-${type}`;
     messageLog.prepend(p);
-    // შეტყობინებების ავტომატური წაშლა 10 წამში
     setTimeout(() => p.remove(), 10000); 
 }
 
@@ -57,7 +55,6 @@ function resetData() {
     currentShelfID = null;
     updateStatusDisplay();
     logMessage("სტატუსი გასუფთავდა. მზადაა ახალი ნივთის დასამაგრებლად.", 'info');
-    // ჩართვის ღილაკის აღდგენა (თუ არ არის აქტიური)
     if (!isScannerActive) {
         cameraToggleButton.innerHTML = '<span class="icon">▶️</span> კამერის ჩართვა';
         cameraToggleButton.classList.remove('stop-btn', 'start-btn');
@@ -69,29 +66,26 @@ function resetData() {
 async function saveData() {
     if (!currentItemID || !currentShelfID) return;
     
-    // **User-Friendly: ღილაკის დროებითი გათიშვა**
     saveButton.disabled = true;
     saveButton.innerHTML = '...შენახვა'; 
 
     try {
-        // **შეამოწმეთ, რომ "db" ცვლადი გლობალურადაა განსაზღვრული firebase-config.js-ში!**
         const timestamp = firebase.firestore.FieldValue.serverTimestamp();
         
-        await db.collection("inventory").doc(currentItemID).set({
-            itemID: currentItemID,
+        // *** .add() მეთოდის გამოყენება უზრუნველყოფს უნიკალურ ჩანაწერს ყოველ ჯერზე ***
+        await db.collection("inventory").add({ 
+            orderID: currentItemID, // ItemID გამოიყენება OrderID-ის აღსანიშნავად
             shelfID: currentShelfID,
             lastMoved: timestamp
         });
 
-        logMessage(`✅ წარმატება: ნივთი **${currentItemID}** დამაგრდა თაროზე **${currentShelfID}**`, 'success');
+        logMessage(`✅ წარმატება: Order ID **${currentItemID}** დამაგრდა თაროზე **${currentShelfID}**`, 'success');
         resetData(); 
         
     } catch (error) {
         logMessage(`❌ Firebase შეცდომა: ${error.name || ''}: ${error.message}. შეამოწმეთ firebase-config.js!`, 'error');
-        // შეცდომის შემთხვევაში ღილაკის აღდგენა
         updateStatusDisplay();
         saveButton.innerHTML = '💾 დამაგრება'; 
-
     }
 }
 
@@ -100,16 +94,15 @@ function onScanSuccess(decodedText, decodedResult) {
     
     if (!currentItemID) {
         currentItemID = scannedID;
-        logMessage(`**ნივთის QR დასკანერდა:** **${currentItemID}**. ახლა დაასკანერეთ თაროს QR.`, 'info');
+        logMessage(`**Order ID დასკანერდა:** **${currentItemID}**. ახლა დაასკანერეთ თაროს QR.`, 'info');
     } else if (!currentShelfID) {
         if (scannedID === currentItemID) {
-            logMessage("გაფრთხილება: ნივთი და თარო ვერ იქნება ერთი და იგივე კოდი. სცადეთ ხელახლა.", 'warning');
+            logMessage("გაფრთხილება: Order ID და თარო ვერ იქნება ერთი და იგივე კოდი. სცადეთ ხელახლა.", 'warning');
             return;
         }
         currentShelfID = scannedID;
         logMessage(`**თაროს QR დასკანერდა:** **${currentShelfID}**. დააჭირეთ 'დამაგრებას'.`, 'info');
         
-        // **User-Friendly: ავტომატური გამორთვა სკანირების დასრულების შემდეგ**
         stopScanner(false);
     } 
     
@@ -130,8 +123,7 @@ async function startScanner() {
             cameraToggleButton.classList.remove('start-btn');
             cameraToggleButton.classList.add('stop-btn');
             cameraToggleButton.disabled = false;
-            // **User-Friendly: მკაფიო მითითება, რა უნდა დასკანერდეს პირველ რიგში**
-            logMessage("კამერა ჩაირთო. **გთხოვთ, დაასკანეროთ ნივთის QR.**", 'info');
+            logMessage("კამერა ჩაირთო. **გთხოვთ, დაასკანეროთ Order ID.**", 'info');
         })
         .catch(err => {
             isScannerActive = false;
@@ -166,7 +158,7 @@ function stopScanner(shouldLog = true) {
     }
 }
 
-// --- მენიუს და ნივთების ლოგიკა (უცვლელია) ---
+// --- მენიუს და ნივთების ლოგიკა (ძიებით) ---
 
 function switchView(viewName) {
     const views = {
@@ -189,8 +181,29 @@ function switchView(viewName) {
     }
 }
 
+// ინვენტარის ჩატვირთვა
 async function loadInventory() {
-    inventoryList.innerHTML = '<h4>ჩატვირთვა...</h4>';
+    const viewContainer = document.getElementById('items-view');
+    const filterInput = document.getElementById('inventory-filter-input');
+    
+    // 1. საძიებო ველის შექმნა (თუ არ არსებობს)
+    if (!filterInput) {
+        const inputHTML = `
+            <input type="text" id="inventory-filter-input" placeholder="მოძებნეთ Order ID-ით..." 
+                   style="width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px;">
+        `;
+        // ჩავსვათ ღილაკსა და სია კონტეინერს შორის
+        viewContainer.insertBefore(document.createRange().createContextualFragment(inputHTML), inventoryList);
+        
+        const newFilterInput = document.getElementById('inventory-filter-input');
+        
+        // დავამატოთ Event Listener ძიებისთვის (keyup)
+        newFilterInput.addEventListener('keyup', () => {
+            filterInventory(newFilterInput.value);
+        });
+    }
+    
+    inventoryList.innerHTML = '<p>ჩატვირთვა...</p>';
 
     try {
         const snapshot = await db.collection("inventory").orderBy("lastMoved", "desc").get();
@@ -200,21 +213,11 @@ async function loadInventory() {
             return;
         }
 
-        let html = '';
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            const lastMoved = data.lastMoved ? data.lastMoved.toDate().toLocaleString('ka-GE') : 'N/A';
-            
-            html += `
-                <div>
-                    <strong>ნივთის ID:</strong> ${data.itemID}<br>
-                    <strong>თარო:</strong> <span>${data.shelfID}</span><br>
-                    <small>ბოლო განთავსება: ${lastMoved}</small>
-                </div>
-            `;
-        });
-
-        inventoryList.innerHTML = html;
+        // შევინახოთ ყველა ნივთი, რათა შევძლოთ ადგილობრივი ფილტრაცია
+        const items = [];
+        snapshot.forEach(doc => items.push({ ...doc.data(), docId: doc.id }));
+        
+        renderInventoryList(items);
 
     } catch (error) {
         inventoryList.innerHTML = `<p class="message-error">შეცდომა ჩატვირთვისას: ${error.message}</p>`;
@@ -222,10 +225,65 @@ async function loadInventory() {
     }
 }
 
+// სიის გამოტანა (რენდერინგი)
+function renderInventoryList(items) {
+    const listContainer = document.getElementById('inventory-list');
+    listContainer.innerHTML = ''; 
+    
+    let html = '';
+    
+    items.forEach(data => {
+        // ჩვენ ვვარაუდობთ, რომ Order ID არის "orderID" ველში
+        const orderId = data.orderID || 'N/A'; 
+        const lastMoved = data.lastMoved ? data.lastMoved.toDate().toLocaleString('ka-GE') : 'N/A';
+        
+        // ლოგიკა სხვა ნივთების პოვნისთვის (იგივე Order ID-ით)
+        const otherItems = items.filter(i => 
+            i.orderID === orderId && i.docId !== data.docId
+        );
+
+        let statusText = '';
+        if (otherItems.length > 0) {
+            // უნიკალური თაროების სიის მიღება
+            const otherShelves = [...new Set(otherItems.map(i => i.shelfID))].join(', ');
+            
+            // User-Friendly: გაფრთხილება, თუ სხვა ნივთები სხვაგანაა
+            statusText = `<span class="message-warning" style="display:block; padding: 5px; margin-top: 5px; font-size: 0.9em; border-radius: 4px;">
+                            ⚠️ Order ID-ის სხვა ნივთები ნაპოვნია თაროებზე: ${otherShelves}
+                          </span>`;
+        }
+
+        html += `
+            <div data-order-id="${orderId}">
+                <strong>Order ID:</strong> ${orderId}<br>
+                <strong>თარო:</strong> <span style="font-size: 1.1em; color: var(--success-color);">${data.shelfID}</span><br>
+                <small>ბოლო განთავსება: ${lastMoved}</small>
+                ${statusText}
+            </div>
+        `;
+    });
+
+    listContainer.innerHTML = html;
+}
+
+// ძიების ფუნქცია
+function filterInventory(searchTerm) {
+    const term = searchTerm.toLowerCase().trim();
+    const items = document.querySelectorAll('#inventory-list > div');
+    
+    items.forEach(item => {
+        const orderId = item.getAttribute('data-order-id');
+        if (orderId && orderId.toLowerCase().includes(term)) {
+            item.style.display = 'block';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+}
+
 // --- ინიციალიზაცია და ღილაკების დამმუშავებლები ---
 
 saveButton.addEventListener('click', async () => {
-    // SaveData-ში უკვე ხდება saveButton.disabled = true;
     await saveData();
 });
 
@@ -240,6 +298,7 @@ navDistributeBtn.addEventListener('click', () => {
 
 navItemsBtn.addEventListener('click', () => {
     switchView('items');
+    loadInventory(); // ჩატვირთვა ყოველთვის, როცა გადავდივართ
 });
 
 loadItemsButton.addEventListener('click', loadInventory);
