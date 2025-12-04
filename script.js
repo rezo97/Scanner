@@ -1,4 +1,4 @@
-// script.js (ვერსია, რომელიც კამერას რთავს, მაგრამ იყენებს ღილაკის მართვას)
+// script.js (აღდგენილი ლოგიკა, რომელიც კამერას რთავდა)
 
 // გლობალური ცვლადები
 let currentItemID = null;
@@ -23,17 +23,17 @@ const inventoryList = document.getElementById('inventory-list');
 // QR სკანერის ინსტანცია
 const html5Qrcode = new Html5Qrcode("reader");
 
-// კონფიგურაცია - გამოყენებულია ის პარამეტრები, რომლებიც მუშაობდა სკანერის გაშვებისას
+// კონფიგურაცია - გამოყენებულია ის პარამეტრები, რომლებიც მუშაობდა
 const config = { 
     fps: 10, 
-    qrbox: { width: 300, height: 300 }, // გაზრდილი ზომა სკანირების გასაუმჯობესებლად
+    qrbox: { width: 300, height: 300 }, // გაზრდილი ზომა
     aspectRatio: 1.0, 
     verbose: true     
 };
 
 let isScannerActive = false; 
 
-// --- ლოგიკური ფუნქციები (უცვლელია) ---
+// --- ლოგიკური ფუნქციები ---
 
 function updateStatusDisplay() {
     itemStatusEl.innerHTML = `**ნივთის QR (ID):** ${currentItemID || 'არ დასკანერებულა'}`;
@@ -101,12 +101,10 @@ function onScanSuccess(decodedText, decodedResult) {
 
 // --- კამერის ფუნქციები ---
 
-// სკანერის გაშვება (პირვანდელი, სამუშაო ლოგიკა)
 async function startScanner() {
-    // შემოწმება, რომ კამერა უკვე არ არის აქტიური
     if (isScannerActive || !document.getElementById('reader') || distributeView.classList.contains('hidden-view')) return;
     
-    // ვიყენებთ ზოგად facingMode-ს, რომელიც თავდაპირველად მუშაობდა
+    // ვიყენებთ ზოგად facingMode-ს
     const cameraRequest = { facingMode: "environment" };
 
     html5Qrcode.start(cameraRequest, config, onScanSuccess)
@@ -127,9 +125,7 @@ async function startScanner() {
         });
 }
 
-// სკანერის შეჩერება (შენარჩუნებული მართვის ლოგიკა)
 function stopScanner(shouldLog = true) {
-    // html5Qrcode.isScanning შემოწმება უკვე გვაქვს
     if (html5Qrcode.isScanning) { 
         html5Qrcode.stop().then(() => {
             isScannerActive = false;
@@ -154,7 +150,7 @@ function stopScanner(shouldLog = true) {
     }
 }
 
-// --- მენიუს და ნივთების ლოგიკა (უცვლელია) ---
+// --- მენიუს და ნივთების ლოგიკა ---
 
 function switchView(viewName) {
     const views = {
@@ -210,7 +206,7 @@ async function loadInventory() {
     }
 }
 
-// --- ინიციალიზაცია და ღილაკების დამმუშავებლები (უცვლელია) ---
+// --- ინიციალიზაცია და ღილაკების დამმუშავებლები ---
 
 saveButton.addEventListener('click', async () => {
     saveButton.disabled = true;
