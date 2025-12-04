@@ -1,4 +1,4 @@
-// script.js (ჩაანაცვლეთ არსებული კოდი სრულად)
+// script.js (გამართული ვერსია კამერის ჩართვის პრობლემის მოსაგვარებლად)
 
 // გლობალური ცვლადები
 let currentItemID = null;
@@ -10,7 +10,7 @@ const shelfStatusEl = document.getElementById('shelf-status');
 const saveButton = document.getElementById('save-button');
 const resetButton = document.getElementById('reset-button');
 const messageLog = document.getElementById('message-log');
-const cameraToggleButton = document.getElementById('camera-toggle-button'); // ახალი ღილაკი
+const cameraToggleButton = document.getElementById('camera-toggle-button'); 
 
 // ნავიგაციის ელემენტები
 const navDistributeBtn = document.getElementById('nav-distribute');
@@ -30,7 +30,7 @@ const config = {
     verbose: true     
 };
 
-let isScannerActive = false; 
+let isScannerActive = false; // სკანერის მდგომარეობის შესანახი ცვლადი
 
 // --- ლოგიკური ფუნქციები ---
 
@@ -70,8 +70,7 @@ async function saveData() {
 
         logMessage(`✅ წარმატება: ნივთი **${currentItemID}** დამაგრდა თაროზე **${currentShelfID}**`, 'success');
         resetData(); 
-        // წარმატების შემდეგ სკანერი არ ირთვება ავტომატურად, მომხმარებელი თავად რთავს.
-
+        
     } catch (error) {
         logMessage(`❌ Firebase შეცდომა: ${error.message}`, 'error');
     }
@@ -103,13 +102,14 @@ function onScanSuccess(decodedText, decodedResult) {
     updateStatusDisplay();
 }
 
-// სკანერის გაშვება
+// სკანერის გაშვება (გამართული)
 function startScanner() {
     if (isScannerActive || !document.getElementById('reader')) return;
     
     // დარწმუნდით, რომ 'reader' ელემენტი ნამდვილად ხილვადია
     if (distributeView.classList.contains('hidden-view')) return;
 
+    // ვცდილობთ გაშვებას
     html5Qrcode.start({ facingMode: "environment" }, config, onScanSuccess)
         .then(() => {
             isScannerActive = true;
@@ -129,17 +129,30 @@ function startScanner() {
 
 // სკანერის შეჩერება
 function stopScanner(shouldLog = true) {
-    if (isScannerActive) {
+    // შემოწმება, არის თუ არა html5Qrcode გაშვებული
+    if (html5Qrcode.isScanning) { 
         html5Qrcode.stop().then(() => {
             isScannerActive = false;
             cameraToggleButton.innerHTML = '<span class="icon">▶️</span> კამერის ჩართვა';
             cameraToggleButton.classList.remove('stop-btn');
             cameraToggleButton.classList.add('start-btn');
+            cameraToggleButton.disabled = false; // ღილაკის ჩართვა
             if (shouldLog) logMessage("სკანერი გამორთულია.", 'info');
         }).catch(err => {
-            if (err.includes("Html5Qrcode is not running")) return;
+            // თუ შეცდომაა და მაინც არ არის გაშვებული (ანუ წარმატებით შეჩერდა)
+            if (err.includes("Html5Qrcode is not running")) {
+                 isScannerActive = false;
+                 return;
+            }
             logMessage(`სკანერის შეჩერების შეცდომა: ${err}`, 'error');
         });
+    } else {
+        // თუ ლოგიკური ცვლადი აქტიურია, მაგრამ სკანერი არა, უბრალოდ ვანახლებთ ღილაკს
+        isScannerActive = false;
+        cameraToggleButton.innerHTML = '<span class="icon">▶️</span> კამერის ჩართვა';
+        cameraToggleButton.classList.remove('stop-btn');
+        cameraToggleButton.classList.add('start-btn');
+        cameraToggleButton.disabled = false; 
     }
 }
 
@@ -162,11 +175,9 @@ function switchView(viewName) {
     views[viewName].view.classList.remove('hidden-view');
     views[viewName].btn.classList.add('active');
 
-    // სკანერის მართვა გვერდების მიხედვით
-    if (viewName === 'distribute') {
-        // არ ჩაირთოს ავტომატურად, მომხმარებელმა უნდა დააჭიროს ღილაკს
-    } else {
-        stopScanner();
+    // თუ ვტოვებთ გადანაწილების გვერდს, ვთიშავთ კამერას
+    if (viewName !== 'distribute') {
+        stopScanner(false);
     }
 }
 
@@ -215,7 +226,6 @@ saveButton.addEventListener('click', async () => {
 resetButton.addEventListener('click', () => {
     stopScanner(false); 
     resetData();
-    // სკანერი არ ირთვება ავტომატურად, მომხმარებელი თავად რთავს
 });
 
 navDistributeBtn.addEventListener('click', () => {
@@ -231,7 +241,7 @@ loadItemsButton.addEventListener('click', loadInventory);
 // კამერის ჩართვა/გამორთვა ღილაკით
 cameraToggleButton.addEventListener('click', () => {
     if (isScannerActive) {
-        stopScanner();
+        stopScanner(true);
     } else {
         startScanner();
     }
